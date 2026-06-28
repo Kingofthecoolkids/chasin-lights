@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>CHASIN LIGHTS — Command Cluster</title>
+<style>
+  :root{
+    --red:#ff2330;
+    --red-glow:#ff3b46;
+    --amber:#ffb200;
+    --green:#33ff8c;
+    --dim:#5a5f66;
+    --ink:#08090b;
+    --panel:#0e1014;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:
+      radial-gradient(120% 90% at 50% -10%, #16191f 0%, #0a0b0e 45%, #060708 100%);
+    color:#e8eaed;
+    font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100%;
+    padding:18px 14px 34px;
+    overflow-x:hidden;
+  }
+  .wrap{max-width:1100px;margin:0 auto;}
+
+  /* Header */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;margin-bottom:10px;flex-wrap:wrap;
+  }
+  .brand{
+    font-weight:800;letter-spacing:.22em;font-size:clamp(20px,4.5vw,34px);
+    text-transform:uppercase;
+    color:#fff;
+    text-shadow:0 0 18px rgba(255,35,48,.55),0 0 4px rgba(255,35,48,.8);
+  }
+  .brand small{
+    display:block;letter-spacing:.42em;font-size:10px;color:var(--dim);
+    font-weight:600;margin-top:2px;text-shadow:none;
+  }
+  .clock{
+    font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim);
+    letter-spacing:.12em;text-align:right;
+  }
+  .clock b{color:#cfd3d8;font-weight:600;}
+
+  /* Gauge grid */
+  .cluster{
+    display:grid;
+    grid-template-columns:1fr 1.35fr 1fr;
+    gap:10px;align-items:center;
+    margin:6px 0 14px;
+  }
+  @media(max-width:760px){
+    .cluster{grid-template-columns:1fr 1fr;}
+    .cluster .center{grid-column:1 / -1;order:-1;}
+  }
+  .gauge{
+    background:radial-gradient(80% 80% at 50% 35%, #14171d 0%, #0c0e12 70%, #090a0d 100%);
+    border:1px solid #1c2128;
+    border-radius:50%;
+    aspect-ratio:1/1;
+    position:relative;
+    box-shadow:inset 0 0 40px rgba(0,0,0,.8), 0 8px 30px rgba(0,0,0,.6);
+    margin:0 auto;width:100%;
+  }
+  .gauge.center{max-width:340px;}
+  .gauge.side{max-width:240px;}
+  svg{width:100%;height:100%;display:block;overflow:visible;}
+  .needle{
+    transform-origin:100px 100px;
+    transition:transform .9s cubic-bezier(.22,1,.36,1);
+    filter:drop-shadow(0 0 6px rgba(255,35,48,.9));
+  }
+  .readout{
+    position:absolute;left:0;right:0;bottom:24%;text-align:center;pointer-events:none;
+  }
+  .readout .val{
+    font-size:clamp(26px,6vw,40px);font-weight:800;line-height:1;
+    font-variant-numeric:tabular-nums;color:#fff;
+    text-shadow:0 0 14px rgba(255,35,48,.5);
+  }
+  .readout .unit{font-size:10px;letter-spacing:.28em;color:var(--dim);margin-top:5px;text-transform:uppercase;}
+  .label{
+    position:absolute;top:17%;left:0;right:0;text-align:center;
+    font-size:11px;letter-spacing:.26em;color:#aeb3ba;text-transform:uppercase;font-weight:600;
+  }
+
+  /* Odometer strip */
+  .odo{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;
+  }
+  .odo .cell{
+    background:linear-gradient(180deg,#0f1217,#0a0c0f);
+    border:1px solid #1c2128;border-radius:12px;padding:14px 10px;text-align:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .odo .num{
+    font-size:clamp(22px,5vw,32px);font-weight:800;font-variant-numeric:tabular-nums;
+    color:#fff;letter-spacing:.04em;
+    font-family:"Consolas","SF Mono",ui-monospace,monospace;
+  }
+  .odo .num .pre{color:var(--red);}
+  .odo .cap{font-size:10px;letter-spacing:.22em;color:var(--dim);margin-top:6px;text-transform:uppercase;}
+
+  /* Warning lights */
+  .tells{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+  }
+  .tell{
+    background:#0c0e12;border:1px solid #1a1f26;border-radius:12px;
+    padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;
+    opacity:.45;transition:opacity .3s, box-shadow .3s;
+  }
+  .tell .dot{width:14px;height:14px;border-radius:50%;background:var(--dim);transition:.3s;}
+  .tell .t{font-size:10px;letter-spacing:.16em;color:#aeb3ba;text-transform:uppercase;font-weight:600;}
+  .tell .c{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums;}
+  .tell.on{opacity:1;}
+  .tell.amber.on{box-shadow:0 0 22px rgba(255,178,0,.25);}
+  .tell.amber.on .dot{background:var(--amber);box-shadow:0 0 12px var(--amber);}
+  .tell.red.on{box-shadow:0 0 22px rgba(255,35,48,.3);}
+  .tell.red.on .dot{background:var(--red);box-shadow:0 0 12px var(--red);}
+  .tell.green.on .dot{background:var(--green);box-shadow:0 0 12px var(--green);}
+  .tell.green.on{opacity:1;}
+
+  footer{margin-top:18px;text-align:center;color:#3a3f46;font-size:10px;letter-spacing:.2em;}
+  .live{color:var(--green);}
+  .demo-tag{
+    display:inline-block;margin-left:8px;padding:2px 8px;border:1px solid #2a2f37;border-radius:20px;
+    color:var(--amber);font-size:9px;letter-spacing:.18em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">Chasin&nbsp;Lights<small>command cluster</small></div>
+    <div class="clock"><b id="clk">--:--:--</b><br><span id="dte">night drive</span></div>
+  </header>
+
+  <div class="cluster">
+    <!-- Speedometer: sales velocity -->
+    <div class="gauge side">
+      <div class="label">Sales / Day</div>
+      <svg viewBox="0 0 200 200" id="g-speed"></svg>
+      <div class="readout"><div class="val" id="v-speed">0</div><div class="unit">orders</div></div>
+    </div>
+
+    <!-- Tachometer: generation rate -->
+    <div class="gauge center">
+      <div class="label">Gen Rate</div>
+      <svg viewBox="0 0 200 200" id="g-tach"></svg>
+      <div class="readout"><div class="val" id="v-tach">0</div><div class="unit">designs / hr</div></div>
+    </div>
+
+    <!-- Fuel: Claude quota -->
+    <div class="gauge side">
+      <div class="label">Claude Fuel</div>
+      <svg viewBox="0 0 200 200" id="g-fuel"></svg>
+      <div class="readout"><div class="val" id="v-fuel">--<span style="font-size:.5em">%</span></div><div class="unit" id="v-fuel-reset">resets --:--</div></div>
+    </div>
+  </div>
+
+  <div class="odo">
+    <div class="cell"><div class="num" id="o-designs">0</div><div class="cap">Designs Made</div></div>
+    <div class="cell"><div class="num" id="o-shirts">0</div><div class="cap">Shirts Sold</div></div>
+    <div class="cell"><div class="num"><span class="pre">$</span><span id="o-rev">0</span></div><div class="cap">Revenue</div></div>
+  </div>
+
+  <div class="tells">
+    <div class="tell amber" id="t-review"><div class="dot"></div><div class="t">Review</div><div class="c" id="c-review">0 waiting</div></div>
+    <div class="tell red" id="t-order"><div class="dot"></div><div class="t">New Order</div><div class="c" id="c-order">none</div></div>
+    <div class="tell amber" id="t-email"><div class="dot"></div><div class="t">Email</div><div class="c" id="c-email">0 unread</div></div>
+    <div class="tell green" id="t-nora"><div class="dot"></div><div class="t">Nora</div><div class="c" id="c-nora">offline</div></div>
+  </div>
+
+  <footer>
+    <span id="status">● initializing</span>
+    <span class="demo-tag">DEMO DATA</span>
+  </footer>
+</div>
+
+<script>
+/* ---------- gauge renderer ---------- */
+const START = -120, SWEEP = 240; // degrees
+function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
+function arcPath(cx,cy,r,a0,a1){
+  const [x0,y0]=polar(cx,cy,r,a0),[x1,y1]=polar(cx,cy,r,a1);
+  const large=(a1-a0)%360>180?1:0;
+  return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`;
+}
+function buildGauge(id,opts){
+  const svg=document.getElementById(id);
+  const cx=100,cy=100,R=82;
+  let ticks="";
+  const major=opts.major||10;
+  for(let i=0;i<=major;i++){
+    const deg=START+SWEEP*(i/major);
+    const r1=R, r2=R-(i%((opts.bigEvery)||1)===0?16:9);
+    const [x1,y1]=polar(cx,cy,r1,deg),[x2,y2]=polar(cx,cy,r2,deg);
+    const red = opts.redFrom!=null && (i/major)>=opts.redFrom;
+    ticks+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${red?'#ff2330':'#3a414b'}" stroke-width="${i%((opts.bigEvery)||1)===0?3:1.5}" stroke-linecap="round"/>`;
+  }
+  // track arc + redline arc
+  const track=arcPath(cx,cy,R,START,START+SWEEP);
+  let redArc="";
+  if(opts.redFrom!=null){
+    redArc=`<path d="${arcPath(cx,cy,R,START+SWEEP*opts.redFrom,START+SWEEP)}" fill="none" stroke="#ff2330" stroke-width="4" opacity=".55"/>`;
+  }
+  svg.innerHTML=`
+    <path d="${track}" fill="none" stroke="#1c222b" stroke-width="4"/>
+    ${redArc}
+    ${ticks}
+    <circle cx="${cx}" cy="${cy}" r="9" fill="#15191f" stroke="#2a313b" stroke-width="2"/>
+    <circle cx="${cx}" cy="${cy}" r="3" fill="#ff2330"/>
+    <g class="needle" id="${id}-n">
+      <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-R+14}" stroke="#ff3b46" stroke-width="4" stroke-linecap="round"/>
+      <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy+14}" stroke="#ff3b46" stroke-width="4" stroke-linecap="round" opacity=".5"/>
+    </g>`;
+}
+function setNeedle(id,frac){
+  frac=Math.max(0,Math.min(1,frac));
+  const n=document.getElementById(id+"-n");
+  if(n) n.style.transform=`rotate(${START+SWEEP*frac}deg)`;
+}
+
+buildGauge("g-speed",{major:10,bigEvery:2});
+buildGauge("g-tach",{major:12,bigEvery:2,redFrom:.8});
+buildGauge("g-fuel",{major:8,bigEvery:8}); // E ... F
+
+/* ---------- demo data + live simulation ---------- */
+const MAX={speed:20,tach:60,fuel:100};
+let demo={
+  speed:3, tach:34, fuelPct:62, fuelReset:"10:30pm",
+  designs:312, shirts:8, rev:184,
+  review:5, order:1, email:2, nora:true
+};
+
+function render(d){
+  setNeedle("g-speed", d.speed/MAX.speed);
+  setNeedle("g-tach",  d.tach/MAX.tach);
+  setNeedle("g-fuel",  d.fuelPct/MAX.fuel);
+  document.getElementById("v-speed").textContent=d.speed;
+  document.getElementById("v-tach").textContent=d.tach;
+  document.getElementById("v-fuel").innerHTML=Math.round(d.fuelPct)+'<span style="font-size:.5em">%</span>';
+  document.getElementById("v-fuel-reset").textContent="resets "+d.fuelReset;
+  document.getElementById("o-designs").textContent=d.designs.toLocaleString();
+  document.getElementById("o-shirts").textContent=d.shirts;
+  document.getElementById("o-rev").textContent=d.rev.toLocaleString();
+
+  tell("t-review", d.review>0, d.review+" waiting");
+  tell("t-order",  d.order>0,  d.order>0?d.order+" new!":"none");
+  tell("t-email",  d.email>0,  d.email+" unread");
+  tell("t-nora",   d.nora,     d.nora?"online":"offline");
+}
+function tell(id,on,txt){
+  const el=document.getElementById(id);el.classList.toggle("on",on);
+  el.querySelector(".c").textContent=txt;
+}
+
+/* gentle living motion so the mockup feels alive */
+function tick(){
+  demo.tach = Math.max(8, Math.min(58, demo.tach + (Math.random()*10-5)));
+  if(Math.random()<0.15) demo.speed = Math.max(0,Math.min(18, demo.speed+(Math.random()<.5?-1:1)));
+  demo.fuelPct = Math.max(4, demo.fuelPct - Math.random()*0.4);
+  if(Math.random()<0.08) demo.designs += 1;
+  render(demo);
+}
+
+/* try real data if served (status.json next to this file); fall back to demo */
+async function pollLive(){
+  try{
+    const r=await fetch("status.json",{cache:"no-store"});
+    if(!r.ok) throw 0;
+    const d=await r.json();
+    render(Object.assign({},demo,d));
+    document.getElementById("status").innerHTML='<span class="live">● LIVE</span>';
+    document.querySelector(".demo-tag").style.display="none";
+    return true;
+  }catch(e){ return false; }
+}
+
+function clock(){
+  const n=new Date();
+  document.getElementById("clk").textContent=n.toLocaleTimeString();
+}
+
+render(demo);
+setInterval(clock,1000);clock();
+setInterval(tick,900);
+document.getElementById("status").textContent="● demo mode — needles are live-simulated";
+// attempt live data every 5s; if found, it takes over
+setInterval(pollLive,5000);
+</script>
+</body>
+</html>

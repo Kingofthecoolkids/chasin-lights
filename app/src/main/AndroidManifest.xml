@@ -38,7 +38,7 @@
           killing/denying camera access here, the fix is to move camera ownership into a
           bound Service that calls startForeground() with foregroundServiceType="camera"
           (and declares android.permission.FOREGROUND_SERVICE_CAMERA, required on API 34+)
-          -- not to add that unconditionally today, since it forces a persistent
+          but not to add that unconditionally today, since it forces a persistent
           notification for a feature (a wallpaper) that users don't expect one from.
         -->
         <service

@@ -18,15 +18,32 @@
         android:theme="@style/Theme.ClearScreen"
         android:supportsRtl="true">
 
+        <!--
+          The actual home-screen launcher icon. NoDisplay + ToggleActivity: tapping the icon
+          flips the on/off state and bounces straight back to the home screen, with no UI of
+          its own; see ToggleActivity's doc comment. The full setup/calibration UI
+          (SetupActivity) is reached via the long-press app shortcut below, and via the
+          redirect ToggleActivity does on the very first launch.
+        -->
         <activity
-            android:name=".settings.SettingsActivity"
+            android:name=".settings.ToggleActivity"
             android:exported="true"
-            android:theme="@style/Theme.ClearScreen">
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <activity
+            android:name=".settings.SetupActivity"
+            android:exported="true"
+            android:theme="@style/Theme.ClearScreen" />
 
         <!--
           NOTE on background camera restrictions (see README "Known limitations"):

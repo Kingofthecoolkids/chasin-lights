@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="open_setup"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:shortcutShortLabel="@string/shortcut_setup_short"
+        android:shortcutLongLabel="@string/shortcut_setup_long">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="com.clearscreen.app"
+            android:targetClass="com.clearscreen.app.settings.SetupActivity" />
+    </shortcut>
+</shortcuts>

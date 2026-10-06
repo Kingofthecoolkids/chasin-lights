@@ -1,8 +1,11 @@
 package com.clearscreen.app.settings
 
+import android.app.Activity
 import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.clearscreen.app.camera.CameraCalibrationMath
 import com.clearscreen.app.data.WallpaperSettings
+import com.clearscreen.app.util.WallpaperSnapshot
 import com.clearscreen.app.wallpaper.ClearScreenWallpaperService
 
 @Composable
@@ -57,18 +61,45 @@ fun SetupScreen(viewModel: SettingsViewModel) {
             }
         }
 
+        val activateLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                viewModel.markActivated()
+            }
+        }
+
         Button(
             onClick = {
-                val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
-                intent.putExtra(
+                // Snapshot whatever wallpaper is active right now, before we replace it -- this
+                // is what lets the home-screen icon toggle "off" show something other than a
+                // blank screen later, with no further system dialog involved.
+                WallpaperSnapshot.capture(context)
+                val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).putExtra(
                     WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
                     ComponentName(context, ClearScreenWallpaperService::class.java)
                 )
-                context.startActivity(intent)
+                activateLauncher.launch(intent)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Set as wallpaper")
+            Text(if (settings.hasActivatedOnce) "Re-activate ClearScreen" else "Activate ClearScreen")
+        }
+
+        if (settings.hasActivatedOnce) {
+            Text(
+                "This is a one-time step. After this, tapping the ClearScreen icon on your " +
+                    "home screen instantly turns the effect on or off -- no dialog, no picker.",
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(if (settings.effectOn) "Currently ON" else "Currently OFF")
+                Switch(checked = settings.effectOn, onCheckedChange = viewModel::setEffectOn)
+            }
         }
 
         HorizontalDivider()

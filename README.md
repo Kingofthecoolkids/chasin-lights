@@ -6,16 +6,18 @@ size and position, rather than looking like an arbitrary zoomed-out camera feed.
 
 ## Status
 
-This is a from-scratch implementation covering everything in the project brief:
-the Camera2 + OpenGL rendering pipeline, visibility/battery-tied camera
-lifecycle, calibration (auto defaults + manual sliders + guided mode), the
-extra settings, and a Compose setup UI. **It has not been built or run on a
-device or emulator.** The sandbox this was written in has a JDK and Gradle but
-no Android SDK, no emulator, and no physical device, so there was no way to run
-`./gradlew assembleDebug`, let alone install and test it. Treat this as a
-careful, complete-on-paper implementation that needs its first real build/run
-pass before you trust it. The "How to test" section below says exactly what to
-check at each stage once you do.
+Covers everything in the project brief, plus an icon-tap on/off toggle added
+afterward (see "How activation and toggling work" below): the Camera2 +
+OpenGL rendering pipeline, visibility/battery-tied camera lifecycle,
+calibration (auto defaults + manual sliders + guided mode), the extra
+settings, a Compose setup UI, and a one-time-activate-then-instant-toggle
+flow. A GitHub Actions workflow (`.github/workflows/build-debug-apk.yml`)
+builds a debug APK on every push and uploads it as an artifact -- that's the
+only thing that has actually compiled this code; it was written without
+access to an Android SDK, emulator, or device locally. It has **not** been
+installed or run on a real device, so the sideloading/toggle flow in
+particular is still unverified end-to-end. The "How to test" section below
+says exactly what to check once you do.
 
 ## Project structure
 
@@ -128,26 +130,59 @@ Android Studio prompts to upgrade AGP/Kotlin/Compose BOM versions, that's
 expected and fine -- these were picked to be reasonably current as of writing,
 not pinned for any particular reason.
 
-## How to set the wallpaper
+## How activation and toggling work
 
-1. Install and launch the app (`com.clearscreen.app` / "ClearScreen").
-2. Grant the camera permission when prompted (the explanation screen is shown
-   first since a wallpaper service can't request permissions itself).
-3. Adjust calibration/extra settings if you want, using the live preview.
-4. Tap **Set as wallpaper** -- this launches
-   `WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER` pointing at
-   `ClearScreenWallpaperService`, and the system's own wallpaper picker takes
-   it from there.
+Android will never let a normal (non-system) app silently become the active
+wallpaper -- `WallpaperManager.setWallpaperComponent()`, the API that would
+do that invisibly, is restricted to system/privileged apps. The one-time
+system confirmation dialog is a deliberate anti-hijacking protection, not
+something any app can route around without root. Given that constraint, this
+app does the next best thing:
+
+1. **First launch** (or long-press the app icon -> **Setup**): grant the
+   camera permission, optionally adjust calibration, then tap **Activate
+   ClearScreen**. This snapshots whatever wallpaper is currently active
+   (`WallpaperSnapshot.capture`, via `WallpaperManager.peekDrawable()`) and
+   then launches `WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER` -- the
+   system's one-time confirmation screen. Tap **Set wallpaper** there.
+2. **From then on**, ClearScreen *is* the system wallpaper, permanently --
+   tapping the home-screen icon never shows that system dialog again.
+   Instead, the launcher icon points at a tiny `Theme.NoDisplay` activity
+   (`ToggleActivity`) that just flips an on/off flag in DataStore and
+   immediately finishes, bouncing you straight back to the home screen:
+   - **On:** the live camera feed, calibrated as usual.
+   - **Off:** the engine stops the camera entirely (same as if the wallpaper
+     weren't visible at all -- zero battery/privacy cost) and instead draws
+     the cached snapshot from step 1, so it looks like your previous
+     wallpaper is back.
+3. To reopen the full calibration/extra-settings screen later, **long-press
+   the app icon** and choose the "Setup" shortcut (or tap it again before
+   ever activating).
+
+**Caveat:** the snapshot in step 1 is a single still image. If your previous
+wallpaper was itself a *live* wallpaper rather than a static image, there is
+no API available to a non-system app that can capture or restore its actual
+live behavior -- `peekDrawable()` has no equivalent for an active live
+wallpaper. In that case capture silently does nothing, and toggling off shows
+a neutral background instead. If your previous wallpaper was a plain static
+image, this restores it essentially exactly.
 
 ## How to test each stage on a real device
 
 Since this couldn't be run here, test in this order once you have a device:
 
-1. **Basic feed.** Set the wallpaper, go to the home screen. You should see
-   the rear camera feed full-screen behind your icons. Check it isn't
-   obviously squished/rotated wrong in both portrait and (if your launcher
-   supports it) landscape.
-2. **Visibility/battery.**
+1. **Basic feed.** Tap the app icon, grant camera permission, tap **Activate
+   ClearScreen**, confirm in the system picker. You should land back on the
+   home screen with the rear camera feed full-screen behind your icons.
+   Check it isn't obviously squished/rotated wrong in both portrait and (if
+   your launcher supports it) landscape.
+2. **Toggle.** Tap the home-screen icon again: it should instantly show
+   whatever your wallpaper was before (or a neutral background if that
+   wallpaper was itself a live wallpaper -- see the caveat above), with no
+   dialog of any kind. Tap again: the camera feed should come back
+   immediately. Long-press the icon and confirm a "Setup" shortcut appears
+   and reopens the full calibration screen.
+3. **Visibility/battery.**
    - Open any app over the home screen: the green camera-in-use indicator
      (Android 12+) should disappear almost immediately. Go back to the home
      screen: it should reappear and the feed should resume.
@@ -158,17 +193,17 @@ Since this couldn't be run here, test in this order once you have a device:
    - Enable Power Saver mode, or set the battery-saver threshold above your
      current battery level in Setup: the feed should freeze on the last
      frame rather than continuing to draw from the camera.
-3. **Calibration.** Open Setup, use the live preview. Check the zoom slider's
+4. **Calibration.** Open Setup, use the live preview. Check the zoom slider's
    starting position looks roughly plausible (not wildly zoomed in/out) on
    first launch -- that's the auto-default. Use guided calibration against a
    door frame or table edge at arm's length and confirm the sliders visibly
    change the crop in the preview and (after a moment) on the actual
    wallpaper. Confirm "Reset to default" actually resets.
-4. **Extra settings.** Toggle blur and dim overlay and confirm they visibly
+5. **Extra settings.** Toggle blur and dim overlay and confirm they visibly
    affect the preview and wallpaper. Change the fps cap and, if you can
    profile it, confirm frame draws are actually throttled. If your device has
    more than one rear lens, confirm the lens chips appear and switching lenses
    restarts the feed on that lens.
-5. **Polish.** Check the launcher icon and the wallpaper picker's thumbnail
+6. **Polish.** Check the launcher icon and the wallpaper picker's thumbnail
    (both placeholders -- replace with final branding whenever ready) show up
    as expected, and skim this README against what you actually built.

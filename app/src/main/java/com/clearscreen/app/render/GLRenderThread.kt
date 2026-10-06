@@ -1,6 +1,7 @@
 package com.clearscreen.app.render
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.hardware.camera2.CameraCharacteristics
 import android.opengl.GLES20
 import android.os.Handler
@@ -12,6 +13,7 @@ import android.view.SurfaceHolder
 import com.clearscreen.app.camera.CameraController
 import com.clearscreen.app.camera.CameraLensInfo
 import com.clearscreen.app.data.WallpaperSettings
+import com.clearscreen.app.util.WallpaperSnapshot
 
 /**
  * The render thread: owns the EGL context, the camera-backed external texture, and the
@@ -29,6 +31,8 @@ class GLRenderThread(private val appContext: Context) {
     private var eglCore: EglCore? = null
     private var windowSurface: WindowSurface? = null
     private var textureRenderer: CameraTextureRenderer? = null
+    private var staticRenderer: StaticBitmapRenderer? = null
+    private var triedLoadingSnapshot = false
 
     private var surfaceWidth = 0
     private var surfaceHeight = 0
@@ -93,6 +97,8 @@ class GLRenderThread(private val appContext: Context) {
         textureRenderer = CameraTextureRenderer().also { renderer ->
             renderer.surfaceTexture.setOnFrameAvailableListener({ onNewCameraFrame() }, handler)
         }
+        staticRenderer = StaticBitmapRenderer()
+        triedLoadingSnapshot = false
         lenses = cameraController.listRearLenses()
         recomputeCameraDesire()
     }
@@ -119,6 +125,8 @@ class GLRenderThread(private val appContext: Context) {
         closeCameraNow()
         textureRenderer?.release()
         textureRenderer = null
+        staticRenderer?.release()
+        staticRenderer = null
         windowSurface?.release()
         windowSurface = null
         eglCore?.release()
@@ -138,11 +146,21 @@ class GLRenderThread(private val appContext: Context) {
 
     private fun renderFrame() {
         val window = windowSurface ?: return
-        val renderer = textureRenderer ?: return
+        if (textureRenderer == null || staticRenderer == null) return
         if (surfaceWidth == 0 || surfaceHeight == 0) return
         window.makeCurrent()
-        if (hasRenderedFrame) {
-            renderer.draw(
+
+        if (!settingsState.effectOn) {
+            ensureSnapshotLoaded()
+            val staticBitmap = staticRenderer
+            GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight)
+            GLES20.glClearColor(0.04f, 0.05f, 0.06f, 1f)
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+            if (staticBitmap?.hasBitmap == true) {
+                staticBitmap.draw(surfaceWidth, surfaceHeight)
+            }
+        } else if (hasRenderedFrame) {
+            textureRenderer!!.draw(
                 viewWidth = surfaceWidth,
                 viewHeight = surfaceHeight,
                 frameWidth = frameSize.width,
@@ -166,8 +184,24 @@ class GLRenderThread(private val appContext: Context) {
         lastDrawTimeNanos = System.nanoTime()
     }
 
+    /** Lazily decodes the cached previous-wallpaper snapshot into a GL texture, once. */
+    private fun ensureSnapshotLoaded() {
+        val renderer = staticRenderer ?: return
+        if (renderer.hasBitmap || triedLoadingSnapshot) return
+        triedLoadingSnapshot = true
+        if (!WallpaperSnapshot.exists(appContext)) return
+        val bitmap = try {
+            BitmapFactory.decodeFile(WallpaperSnapshot.filePath(appContext))
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to decode cached wallpaper snapshot", e)
+            null
+        }
+        bitmap?.let { renderer.setBitmap(it) }
+    }
+
     private fun shouldCameraBeOpen(): Boolean =
-        isVisible && hasCameraPermission && !isBatteryPaused && textureRenderer != null && surfaceWidth > 0
+        isVisible && hasCameraPermission && !isBatteryPaused && settingsState.effectOn &&
+            textureRenderer != null && surfaceWidth > 0
 
     private fun recomputeCameraDesire() {
         val shouldOpen = shouldCameraBeOpen()

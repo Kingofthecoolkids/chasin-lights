@@ -35,6 +35,10 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun setFpsCap(fps: Int) = update { it.copy(fpsCap = fps) }
     fun setBatterySaverThreshold(percent: Int) = update { it.copy(batterySaverThresholdPercent = percent) }
     fun setLens(lensId: String?) = update { it.copy(lensId = lensId) }
+    fun setEffectOn(on: Boolean) = update { it.copy(effectOn = on) }
+
+    /** Called once the system wallpaper picker confirms ClearScreen was actually set. */
+    fun markActivated() = update { it.copy(hasActivatedOnce = true, effectOn = true) }
 
     /** Runs once per install: computes the hardware-derived auto zoom default. Offsets stay at 0 (see CameraCalibrationMath doc). */
     fun applyAutoCalibrationIfNeeded() {

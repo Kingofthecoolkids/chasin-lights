@@ -28,4 +28,7 @@
     <string name="setting_lens">Lens</string>
 
     <string name="camera_unavailable">Camera unavailable &#8212; showing last frame</string>
+
+    <string name="shortcut_setup_short">Setup</string>
+    <string name="shortcut_setup_long">Open ClearScreen setup</string>
 </resources>

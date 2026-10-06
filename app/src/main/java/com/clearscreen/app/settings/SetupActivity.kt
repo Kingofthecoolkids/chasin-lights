@@ -20,7 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
-class SettingsActivity : ComponentActivity() {
+class SetupActivity : ComponentActivity() {
 
     private val viewModel: SettingsViewModel by viewModels()
 

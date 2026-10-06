@@ -21,8 +21,9 @@ import kotlinx.coroutines.launch
  * the whole project hinges on: the camera is open if and only if this engine is visible, has
  * permission, and isn't battery-paused -- see [GLRenderThread.recomputeCameraDesire].
  */
-class ClearScreenEngine(private val appContext: Context) : WallpaperService.Engine() {
+class ClearScreenEngine(service: WallpaperService) : service.Engine() {
 
+    private val appContext: Context = service.applicationContext
     private val renderThread = GLRenderThread(appContext)
     private val settingsRepository = SettingsRepository(appContext)
     private val engineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())

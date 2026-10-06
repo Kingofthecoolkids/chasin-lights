@@ -3,8 +3,6 @@ package com.clearscreen.app.render
 import android.graphics.SurfaceTexture
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
 /**
@@ -30,7 +28,7 @@ class CameraTextureRenderer {
     private var uTexelSizeLoc = 0
 
     private val stMatrix = FloatArray(16)
-    private val quadVertices: FloatBuffer = makeQuadBuffer()
+    private val quadVertices: FloatBuffer = QuadGeometry.makeBuffer()
 
     init {
         program = ShaderUtil.buildProgram(VERTEX_SHADER, FRAGMENT_SHADER)
@@ -136,23 +134,7 @@ class CameraTextureRenderer {
     }
 
     companion object {
-        private const val FLOATS_PER_VERTEX = 4 // x, y, u, v
-        private const val STRIDE = FLOATS_PER_VERTEX * 4 // bytes
-
-        private fun makeQuadBuffer(): FloatBuffer {
-            // Triangle strip covering clip space [-1,1], texcoords [0,1] (origin top-left of the quad;
-            // the actual sample-space mapping is handled by uCropMatrix / uSTMatrix).
-            val data = floatArrayOf(
-                -1f, -1f, 0f, 1f,
-                1f, -1f, 1f, 1f,
-                -1f, 1f, 0f, 0f,
-                1f, 1f, 1f, 0f
-            )
-            return ByteBuffer.allocateDirect(data.size * 4)
-                .order(ByteOrder.nativeOrder())
-                .asFloatBuffer()
-                .apply { put(data); position(0) }
-        }
+        private const val STRIDE = QuadGeometry.STRIDE_BYTES
 
         private const val VERTEX_SHADER = """
             attribute vec4 aPosition;

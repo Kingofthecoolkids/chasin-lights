@@ -1,6 +1,7 @@
 package com.clearscreen.app.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -25,36 +26,29 @@ class SettingsRepository(private val context: Context) {
         val BATTERY_SAVER_THRESHOLD = intPreferencesKey("battery_saver_threshold")
         val LENS_ID = stringPreferencesKey("lens_id")
         val HAS_COMPLETED_AUTO_CALIBRATION = booleanPreferencesKey("has_completed_auto_calibration")
+        val HAS_ACTIVATED_ONCE = booleanPreferencesKey("has_activated_once")
+        val EFFECT_ON = booleanPreferencesKey("effect_on")
     }
 
-    val settingsFlow: Flow<WallpaperSettings> = context.dataStore.data.map { prefs ->
-        WallpaperSettings(
-            zoom = prefs[Keys.ZOOM] ?: 1f,
-            offsetX = prefs[Keys.OFFSET_X] ?: 0f,
-            offsetY = prefs[Keys.OFFSET_Y] ?: 0f,
-            brightness = prefs[Keys.BRIGHTNESS] ?: 1f,
-            blurEnabled = prefs[Keys.BLUR_ENABLED] ?: false,
-            fpsCap = prefs[Keys.FPS_CAP] ?: 24,
-            batterySaverThresholdPercent = prefs[Keys.BATTERY_SAVER_THRESHOLD] ?: 15,
-            lensId = prefs[Keys.LENS_ID],
-            hasCompletedAutoCalibration = prefs[Keys.HAS_COMPLETED_AUTO_CALIBRATION] ?: false
-        )
-    }
+    private fun fromPrefs(prefs: Preferences): WallpaperSettings = WallpaperSettings(
+        zoom = prefs[Keys.ZOOM] ?: 1f,
+        offsetX = prefs[Keys.OFFSET_X] ?: 0f,
+        offsetY = prefs[Keys.OFFSET_Y] ?: 0f,
+        brightness = prefs[Keys.BRIGHTNESS] ?: 1f,
+        blurEnabled = prefs[Keys.BLUR_ENABLED] ?: false,
+        fpsCap = prefs[Keys.FPS_CAP] ?: 24,
+        batterySaverThresholdPercent = prefs[Keys.BATTERY_SAVER_THRESHOLD] ?: 15,
+        lensId = prefs[Keys.LENS_ID],
+        hasCompletedAutoCalibration = prefs[Keys.HAS_COMPLETED_AUTO_CALIBRATION] ?: false,
+        hasActivatedOnce = prefs[Keys.HAS_ACTIVATED_ONCE] ?: false,
+        effectOn = prefs[Keys.EFFECT_ON] ?: true
+    )
+
+    val settingsFlow: Flow<WallpaperSettings> = context.dataStore.data.map(::fromPrefs)
 
     suspend fun update(transform: (WallpaperSettings) -> WallpaperSettings) {
         context.dataStore.edit { prefs ->
-            val current = WallpaperSettings(
-                zoom = prefs[Keys.ZOOM] ?: 1f,
-                offsetX = prefs[Keys.OFFSET_X] ?: 0f,
-                offsetY = prefs[Keys.OFFSET_Y] ?: 0f,
-                brightness = prefs[Keys.BRIGHTNESS] ?: 1f,
-                blurEnabled = prefs[Keys.BLUR_ENABLED] ?: false,
-                fpsCap = prefs[Keys.FPS_CAP] ?: 24,
-                batterySaverThresholdPercent = prefs[Keys.BATTERY_SAVER_THRESHOLD] ?: 15,
-                lensId = prefs[Keys.LENS_ID],
-                hasCompletedAutoCalibration = prefs[Keys.HAS_COMPLETED_AUTO_CALIBRATION] ?: false
-            )
-            val updated = transform(current)
+            val updated = transform(fromPrefs(prefs))
             prefs[Keys.ZOOM] = updated.zoom
             prefs[Keys.OFFSET_X] = updated.offsetX
             prefs[Keys.OFFSET_Y] = updated.offsetY
@@ -64,10 +58,18 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.BATTERY_SAVER_THRESHOLD] = updated.batterySaverThresholdPercent
             updated.lensId?.let { prefs[Keys.LENS_ID] = it }
             prefs[Keys.HAS_COMPLETED_AUTO_CALIBRATION] = updated.hasCompletedAutoCalibration
+            prefs[Keys.HAS_ACTIVATED_ONCE] = updated.hasActivatedOnce
+            prefs[Keys.EFFECT_ON] = updated.effectOn
         }
     }
 
+    /** Resets calibration/extra settings only -- never touches activation state, so this never deactivates the wallpaper. */
     suspend fun resetToDefaults() {
-        context.dataStore.edit { it.clear() }
+        update {
+            WallpaperSettings(
+                hasActivatedOnce = it.hasActivatedOnce,
+                effectOn = it.effectOn
+            )
+        }
     }
 }

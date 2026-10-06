@@ -14,7 +14,11 @@ data class WallpaperSettings(
     val fpsCap: Int = 24,
     val batterySaverThresholdPercent: Int = 15,
     val lensId: String? = null,
-    val hasCompletedAutoCalibration: Boolean = false
+    val hasCompletedAutoCalibration: Boolean = false,
+    /** True once the user has confirmed ClearScreen in the system's live-wallpaper picker at least once. */
+    val hasActivatedOnce: Boolean = false,
+    /** The on/off state the home-screen icon toggles. Camera only runs when this is also true. */
+    val effectOn: Boolean = true
 ) {
     companion object {
         val FPS_CAP_OPTIONS = listOf(15, 24, 30)

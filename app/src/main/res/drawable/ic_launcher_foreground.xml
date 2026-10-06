@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder mark: a dashed viewfinder frame over a diagonal "see-through" cut, standing in for final branding. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M24,54 L84,54"
+        android:strokeColor="#4DE1C2"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.35" />
+    <path
+        android:pathData="M54,24 L54,84"
+        android:strokeColor="#4DE1C2"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.35" />
+    <path
+        android:pathData="M34,34 L34,44 M34,34 L44,34"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M74,34 L74,44 M74,34 L64,34"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M34,74 L34,64 M34,74 L44,74"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M74,74 L74,64 M74,74 L64,74"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M64,54 A10,10 0 1,1 44,54 A10,10 0 1,1 64,54 Z"
+        android:fillColor="#4DE1C2" />
+</vector>

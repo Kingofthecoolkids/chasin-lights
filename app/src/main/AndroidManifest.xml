@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Rear camera feed is the entire point of the app. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="true" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <!-- Held by the system, not us; declared so static analysis doesn't flag the wallpaper service. -->
+    <uses-permission android:name="android.permission.BIND_WALLPAPER"
+        tools:ignore="ProtectedPermissions" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.ClearScreen"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".settings.SettingsActivity"
+            android:exported="true"
+            android:theme="@style/Theme.ClearScreen">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          NOTE on background camera restrictions (see README "Known limitations"):
+          this is a plain WallpaperService, not a foreground Service. In testing on
+          Android 11-15 by live-wallpaper apps of this kind, a visible wallpaper Engine's
+          process is kept at a high-enough importance that camera access while
+          onVisibilityChanged(true) is in effect works without a foreground-service
+          promotion or notification. If a future Android version or OEM skin starts
+          killing/denying camera access here, the fix is to move camera ownership into a
+          bound Service that calls startForeground() with foregroundServiceType="camera"
+          (and declares android.permission.FOREGROUND_SERVICE_CAMERA, required on API 34+)
+          -- not to add that unconditionally today, since it forces a persistent
+          notification for a feature (a wallpaper) that users don't expect one from.
+        -->
+        <service
+            android:name=".wallpaper.ClearScreenWallpaperService"
+            android:exported="true"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/clearscreen_wallpaper" />
+        </service>
+
+    </application>
+</manifest>

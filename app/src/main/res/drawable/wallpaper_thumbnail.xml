@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder wallpaper-picker thumbnail: phone outline with a "see-through" gradient fill, standing in for a real screenshot. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="512dp"
+    android:height="512dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path
+        android:pathData="M0,0 L512,0 L512,512 L0,512 Z"
+        android:fillColor="#0D1013" />
+    <path
+        android:pathData="M60,470 L60,42 L452,42 L452,470 Z"
+        android:strokeColor="#3A4046"
+        android:strokeWidth="6"
+        android:fillColor="#161B20" />
+    <path
+        android:pathData="M90,160 L422,420 M90,420 L422,160 M90,290 L422,290"
+        android:strokeColor="#2A3137"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.6" />
+    <path
+        android:pathData="M186,120 L326,120 L326,220 L186,220 Z"
+        android:fillColor="#4DE1C2"
+        android:fillAlpha="0.85" />
+    <path
+        android:pathData="M226,290 A30,30 0 1,1 286,290 A30,30 0 1,1 226,290 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.9" />
+    <path
+        android:pathData="M206,380 L306,380 L306,410 L206,410 Z"
+        android:fillColor="#FF8A5B"
+        android:fillAlpha="0.85" />
+</vector>

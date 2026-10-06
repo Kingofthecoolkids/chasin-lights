@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ClearScreen</string>
+    <string name="wallpaper_description">Streams the rear camera as your background, calibrated so what\'s behind the phone lines up at true size and position.</string>
+
+    <string name="permission_title">Camera access needed</string>
+    <string name="permission_body">ClearScreen shows the rear camera feed as your home screen background, so icons appear to float over a see-through phone. It needs the Camera permission to do that. The camera only turns on while the wallpaper is actually on screen, and never when another app is open or the screen is off.</string>
+    <string name="permission_grant">Grant camera permission</string>
+    <string name="permission_denied_settings">Camera permission was denied. Open app settings to grant it.</string>
+    <string name="permission_open_settings">Open settings</string>
+
+    <string name="set_wallpaper">Set as wallpaper</string>
+    <string name="setup_title">ClearScreen setup</string>
+
+    <string name="calibration_title">Calibration</string>
+    <string name="calibration_zoom">Zoom</string>
+    <string name="calibration_offset_x">Horizontal offset</string>
+    <string name="calibration_offset_y">Vertical offset</string>
+    <string name="calibration_reset">Reset to default</string>
+    <string name="calibration_guided_start">Start guided calibration</string>
+    <string name="calibration_guided_instructions">Hold the phone at arm\'s length in front of a straight edge (a door frame or table edge works well). Adjust zoom and offset until the edge lines up through the gap around the phone.</string>
+
+    <string name="extra_settings_title">Extra settings</string>
+    <string name="setting_brightness">Dim overlay</string>
+    <string name="setting_blur">Blur (readability)</string>
+    <string name="setting_fps">Frame rate cap</string>
+    <string name="setting_battery_saver">Pause below battery %%</string>
+    <string name="setting_lens">Lens</string>
+
+    <string name="camera_unavailable">Camera unavailable &#8212; showing last frame</string>
+</resources>

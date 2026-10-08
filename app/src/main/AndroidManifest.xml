@@ -40,10 +40,16 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
+        <!--
+          Locked portrait: the live preview's GL transform assumes the setup screen's own display
+          rotation is always 0 (see PreviewRenderer), so letting this screen itself rotate would
+          make the preview wrong independently of the wallpaper's own rotation handling.
+        -->
         <activity
             android:name=".settings.SetupActivity"
             android:exported="true"
-            android:theme="@style/Theme.ClearScreen" />
+            android:theme="@style/Theme.ClearScreen"
+            android:screenOrientation="portrait" />
 
         <!--
           NOTE on background camera restrictions (see README "Known limitations"):

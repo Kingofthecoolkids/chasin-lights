@@ -37,6 +37,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun setLens(lensId: String?) = update { it.copy(lensId = lensId) }
     fun setEffectOn(on: Boolean) = update { it.copy(effectOn = on) }
 
+    /** The guaranteed manual fix if the feed is ever sideways/upside down: pick 0/90/180/270 directly. */
+    fun setRotationOverride(degrees: Int) = update { it.copy(manualRotationOverride = degrees) }
+
     /** Called once the system wallpaper picker confirms ClearScreen was actually set. */
     fun markActivated() = update { it.copy(hasActivatedOnce = true, effectOn = true) }
 

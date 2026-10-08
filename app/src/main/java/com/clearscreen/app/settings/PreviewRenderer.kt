@@ -3,6 +3,7 @@ package com.clearscreen.app.settings
 import android.content.Context
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
+import android.util.Log
 import android.util.Size
 import android.view.Surface
 import com.clearscreen.app.camera.CameraController
@@ -35,9 +36,13 @@ class PreviewRenderer(
     private var viewHeight = 0
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        textureRenderer = CameraTextureRenderer()
-        lenses = cameraController.listRearLenses()
-        hasRenderedFrame = false
+        try {
+            textureRenderer = CameraTextureRenderer()
+            lenses = cameraController.listRearLenses()
+            hasRenderedFrame = false
+        } catch (e: Exception) {
+            Log.e(TAG, "Preview GL setup failed on this device", e)
+        }
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -48,29 +53,36 @@ class PreviewRenderer(
 
     override fun onDrawFrame(gl: GL10?) {
         val renderer = textureRenderer ?: return
-        if (isCameraOpen) {
-            renderer.updateTexImage()
-            hasRenderedFrame = true
-        }
-        if (hasRenderedFrame) {
-            val s = settingsProvider()
-            renderer.draw(
-                viewWidth = viewWidth,
-                viewHeight = viewHeight,
-                frameWidth = frameSize.width,
-                frameHeight = frameSize.height,
-                sensorOrientationDegrees = currentLens?.sensorOrientationDegrees ?: 90,
-                displayRotationDegrees = 0, // the setup screen is portrait-only; see activity theme/manifest
-                zoom = s.zoom,
-                offsetXFraction = s.offsetX,
-                offsetYFraction = s.offsetY,
-                brightness = s.brightness,
-                blurEnabled = s.blurEnabled
-            )
-        } else {
-            GLES20.glViewport(0, 0, viewWidth, viewHeight)
-            GLES20.glClearColor(0.04f, 0.05f, 0.06f, 1f)
-            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+        try {
+            if (isCameraOpen) {
+                renderer.updateTexImage()
+                hasRenderedFrame = true
+            }
+            if (hasRenderedFrame) {
+                val s = settingsProvider()
+                renderer.draw(
+                    viewWidth = viewWidth,
+                    viewHeight = viewHeight,
+                    frameWidth = frameSize.width,
+                    frameHeight = frameSize.height,
+                    sensorOrientationDegrees = currentLens?.sensorOrientationDegrees ?: 90,
+                    // The setup screen is locked portrait (see SetupActivity's manifest entry), so
+                    // the base display rotation is always 0 here; the manual override is still live
+                    // so the preview matches what the wallpaper will actually show.
+                    displayRotationDegrees = s.manualRotationOverride,
+                    zoom = s.zoom,
+                    offsetXFraction = s.offsetX,
+                    offsetYFraction = s.offsetY,
+                    brightness = s.brightness,
+                    blurEnabled = s.blurEnabled
+                )
+            } else {
+                GLES20.glViewport(0, 0, viewWidth, viewHeight)
+                GLES20.glClearColor(0.04f, 0.05f, 0.06f, 1f)
+                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Preview draw failed", e)
         }
     }
 
@@ -129,5 +141,9 @@ class PreviewRenderer(
     fun availableLenses(): List<CameraLensInfo> {
         if (lenses.isEmpty()) lenses = cameraController.listRearLenses()
         return lenses
+    }
+
+    companion object {
+        private const val TAG = "PreviewRenderer"
     }
 }

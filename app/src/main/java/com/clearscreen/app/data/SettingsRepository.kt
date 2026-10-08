@@ -28,6 +28,7 @@ class SettingsRepository(private val context: Context) {
         val HAS_COMPLETED_AUTO_CALIBRATION = booleanPreferencesKey("has_completed_auto_calibration")
         val HAS_ACTIVATED_ONCE = booleanPreferencesKey("has_activated_once")
         val EFFECT_ON = booleanPreferencesKey("effect_on")
+        val MANUAL_ROTATION_OVERRIDE = intPreferencesKey("manual_rotation_override")
     }
 
     private fun fromPrefs(prefs: Preferences): WallpaperSettings = WallpaperSettings(
@@ -41,7 +42,8 @@ class SettingsRepository(private val context: Context) {
         lensId = prefs[Keys.LENS_ID],
         hasCompletedAutoCalibration = prefs[Keys.HAS_COMPLETED_AUTO_CALIBRATION] ?: false,
         hasActivatedOnce = prefs[Keys.HAS_ACTIVATED_ONCE] ?: false,
-        effectOn = prefs[Keys.EFFECT_ON] ?: true
+        effectOn = prefs[Keys.EFFECT_ON] ?: true,
+        manualRotationOverride = prefs[Keys.MANUAL_ROTATION_OVERRIDE] ?: 0
     )
 
     val settingsFlow: Flow<WallpaperSettings> = context.dataStore.data.map(::fromPrefs)
@@ -60,15 +62,21 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.HAS_COMPLETED_AUTO_CALIBRATION] = updated.hasCompletedAutoCalibration
             prefs[Keys.HAS_ACTIVATED_ONCE] = updated.hasActivatedOnce
             prefs[Keys.EFFECT_ON] = updated.effectOn
+            prefs[Keys.MANUAL_ROTATION_OVERRIDE] = updated.manualRotationOverride
         }
     }
 
-    /** Resets calibration/extra settings only -- never touches activation state, so this never deactivates the wallpaper. */
+    /**
+     * Resets calibration/extra settings only -- never touches activation state (so this never
+     * deactivates the wallpaper) or the manual rotation override (a device-specific correction,
+     * not something "reset calibration" should undo).
+     */
     suspend fun resetToDefaults() {
         update {
             WallpaperSettings(
                 hasActivatedOnce = it.hasActivatedOnce,
-                effectOn = it.effectOn
+                effectOn = it.effectOn,
+                manualRotationOverride = it.manualRotationOverride
             )
         }
     }

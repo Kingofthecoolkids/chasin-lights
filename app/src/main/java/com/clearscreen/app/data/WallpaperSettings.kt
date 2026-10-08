@@ -18,10 +18,18 @@ data class WallpaperSettings(
     /** True once the user has confirmed ClearScreen in the system's live-wallpaper picker at least once. */
     val hasActivatedOnce: Boolean = false,
     /** The on/off state the home-screen icon toggles. Camera only runs when this is also true. */
-    val effectOn: Boolean = true
+    val effectOn: Boolean = true,
+    /**
+     * Extra clockwise rotation (0/90/180/270) added on top of the auto-detected sensor/display
+     * rotation. The auto-detected rotation can't be verified against every device's actual
+     * sensorOrientation/mount angle without real hardware to test on, so this is the guaranteed
+     * manual fix if the feed ever comes up sideways or upside down: cycle it until it looks right.
+     */
+    val manualRotationOverride: Int = 0
 ) {
     companion object {
         val FPS_CAP_OPTIONS = listOf(15, 24, 30)
+        val ROTATION_OPTIONS = listOf(0, 90, 180, 270)
         const val OFFSET_RANGE = 0.3f
         const val BRIGHTNESS_MIN = 0.15f // never let the dim overlay go fully black
     }

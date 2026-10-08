@@ -36,24 +36,35 @@ class CameraController(context: Context) {
     private var device: CameraDevice? = null
     private var session: CameraCaptureSession? = null
 
+    /**
+     * [CameraManager.getCameraCharacteristics] (and `cameraIdList`) can throw
+     * [CameraAccessException] if the camera subsystem is in a bad state (service crashed, device
+     * mid-sleep/wake, etc.). Both this and [choosePreviewSize] are called from code paths with no
+     * try/catch of their own (e.g. a plain visibility change), so they must never let that escape.
+     */
     fun listRearLenses(): List<CameraLensInfo> {
         val result = mutableListOf<Pair<CameraLensInfo, Float>>() // info + focal length for ultrawide ranking
-        for (id in cameraManager.cameraIdList) {
-            val chars = cameraManager.getCameraCharacteristics(id)
-            if (chars.get(CameraCharacteristics.LENS_FACING) != CameraCharacteristics.LENS_FACING_BACK) continue
-            val focalLengths = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
-            val sensorSize = chars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
-            val sensorOrientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
-            if (focalLengths == null || focalLengths.isEmpty() || sensorSize == null) continue
-            val focalLength = focalLengths[0]
-            result += CameraLensInfo(
-                cameraId = id,
-                sensorOrientationDegrees = sensorOrientation,
-                focalLengthMm = focalLength,
-                sensorPhysicalWidthMm = sensorSize.width,
-                sensorPhysicalHeightMm = sensorSize.height,
-                isUltrawide = false // placeholder, fixed up below
-            ) to focalLength
+        try {
+            for (id in cameraManager.cameraIdList) {
+                val chars = cameraManager.getCameraCharacteristics(id)
+                if (chars.get(CameraCharacteristics.LENS_FACING) != CameraCharacteristics.LENS_FACING_BACK) continue
+                val focalLengths = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+                val sensorSize = chars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+                val sensorOrientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+                if (focalLengths == null || focalLengths.isEmpty() || sensorSize == null) continue
+                val focalLength = focalLengths[0]
+                result += CameraLensInfo(
+                    cameraId = id,
+                    sensorOrientationDegrees = sensorOrientation,
+                    focalLengthMm = focalLength,
+                    sensorPhysicalWidthMm = sensorSize.width,
+                    sensorPhysicalHeightMm = sensorSize.height,
+                    isUltrawide = false // placeholder, fixed up below
+                ) to focalLength
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to enumerate rear lenses", e)
+            return emptyList()
         }
         if (result.isEmpty()) return emptyList()
         // Shortest focal length among back lenses = widest field of view = "ultrawide".
@@ -64,23 +75,28 @@ class CameraController(context: Context) {
     }
 
     fun choosePreviewSize(cameraId: String, targetWidth: Int, targetHeight: Int): Size {
-        val chars = cameraManager.getCameraCharacteristics(cameraId)
-        val map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-            ?: return Size(targetWidth, targetHeight)
-        val choices = map.getOutputSizes(android.graphics.SurfaceTexture::class.java) ?: emptyArray()
-        if (choices.isEmpty()) return Size(targetWidth, targetHeight)
+        try {
+            val chars = cameraManager.getCameraCharacteristics(cameraId)
+            val map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                ?: return Size(targetWidth, targetHeight)
+            val choices = map.getOutputSizes(android.graphics.SurfaceTexture::class.java) ?: emptyArray()
+            if (choices.isEmpty()) return Size(targetWidth, targetHeight)
 
-        val targetAspect = targetWidth.toFloat() / targetHeight
-        // No need for 4K: cap the long side near the screen's long side, then pick the closest
-        // aspect ratio among sizes at or above that cap so we're not drastically upscaling.
-        val cappedLongSide = maxOf(targetWidth, targetHeight)
-        return choices
-            .filter { maxOf(it.width, it.height) <= cappedLongSide * 1.5 }
-            .ifEmpty { choices.toList() }
-            .minByOrNull { size ->
-                val aspect = size.width.toFloat() / size.height
-                kotlin.math.abs(aspect - targetAspect) * 1000 - minOf(size.width, size.height) * 0.001f
-            } ?: choices[0]
+            val targetAspect = targetWidth.toFloat() / targetHeight
+            // No need for 4K: cap the long side near the screen's long side, then pick the closest
+            // aspect ratio among sizes at or above that cap so we're not drastically upscaling.
+            val cappedLongSide = maxOf(targetWidth, targetHeight)
+            return choices
+                .filter { maxOf(it.width, it.height) <= cappedLongSide * 1.5 }
+                .ifEmpty { choices.toList() }
+                .minByOrNull { size ->
+                    val aspect = size.width.toFloat() / size.height
+                    kotlin.math.abs(aspect - targetAspect) * 1000 - minOf(size.width, size.height) * 0.001f
+                } ?: choices[0]
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read stream configuration for $cameraId", e)
+            return Size(targetWidth, targetHeight)
+        }
     }
 
     @SuppressLint("MissingPermission") // caller has already verified CAMERA permission is granted

@@ -90,35 +90,46 @@ class GLRenderThread(private val appContext: Context) {
     // --- Everything below runs only on the GL render thread's handler. ---
 
     private fun doSurfaceCreated(holder: SurfaceHolder) {
-        val core = EglCore()
-        eglCore = core
-        windowSurface = WindowSurface(core, holder.surface)
-        windowSurface?.makeCurrent()
-        textureRenderer = CameraTextureRenderer().also { renderer ->
-            renderer.surfaceTexture.setOnFrameAvailableListener({ onNewCameraFrame() }, handler)
+        // EGL/GL setup is the least-tested code path on real device hardware -- an unsupported
+        // config here must not take the whole process down. Fail to a dark screen instead.
+        try {
+            val core = EglCore()
+            eglCore = core
+            windowSurface = WindowSurface(core, holder.surface)
+            windowSurface?.makeCurrent()
+            textureRenderer = CameraTextureRenderer().also { renderer ->
+                renderer.surfaceTexture.setOnFrameAvailableListener({ onNewCameraFrame() }, handler)
+            }
+            staticRenderer = StaticBitmapRenderer()
+            triedLoadingSnapshot = false
+            lenses = cameraController.listRearLenses()
+            recomputeCameraDesire()
+        } catch (e: Exception) {
+            Log.e(TAG, "GL/EGL setup failed on this device", e)
+            doSurfaceDestroyed() // clean up anything partially created, leave everything null
         }
-        staticRenderer = StaticBitmapRenderer()
-        triedLoadingSnapshot = false
-        lenses = cameraController.listRearLenses()
-        recomputeCameraDesire()
     }
 
     private fun doSurfaceChanged(holder: SurfaceHolder, width: Int, height: Int, rotationDegrees: Int) {
         surfaceWidth = width
         surfaceHeight = height
         displayRotationDegrees = rotationDegrees
-        // Surface dimensions/format may have changed (e.g. rotation): rebuild the EGL window
-        // surface against the same (possibly resized) native Surface.
         val core = eglCore ?: return
-        windowSurface?.release()
-        windowSurface = WindowSurface(core, holder.surface)
-        windowSurface?.makeCurrent()
-        if (isCameraOpen) {
-            // Re-pick preview size for the new dimensions/orientation and restart the stream.
-            closeCameraNow()
+        try {
+            // Surface dimensions/format may have changed (e.g. rotation): rebuild the EGL window
+            // surface against the same (possibly resized) native Surface.
+            windowSurface?.release()
+            windowSurface = WindowSurface(core, holder.surface)
+            windowSurface?.makeCurrent()
+            if (isCameraOpen) {
+                // Re-pick preview size for the new dimensions/orientation and restart the stream.
+                closeCameraNow()
+            }
+            recomputeCameraDesire()
+            renderFrame()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to rebuild the window surface", e)
         }
-        recomputeCameraDesire()
-        renderFrame()
     }
 
     private fun doSurfaceDestroyed() {
@@ -148,40 +159,46 @@ class GLRenderThread(private val appContext: Context) {
         val window = windowSurface ?: return
         if (textureRenderer == null || staticRenderer == null) return
         if (surfaceWidth == 0 || surfaceHeight == 0) return
-        window.makeCurrent()
+        try {
+            window.makeCurrent()
 
-        if (!settingsState.effectOn) {
-            ensureSnapshotLoaded()
-            val staticBitmap = staticRenderer
-            GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight)
-            GLES20.glClearColor(0.04f, 0.05f, 0.06f, 1f)
-            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-            if (staticBitmap?.hasBitmap == true) {
-                staticBitmap.draw(surfaceWidth, surfaceHeight)
+            if (!settingsState.effectOn) {
+                ensureSnapshotLoaded()
+                val staticBitmap = staticRenderer
+                GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight)
+                GLES20.glClearColor(0.04f, 0.05f, 0.06f, 1f)
+                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+                if (staticBitmap?.hasBitmap == true) {
+                    staticBitmap.draw(surfaceWidth, surfaceHeight)
+                }
+            } else if (hasRenderedFrame) {
+                val effectiveRotation =
+                    (displayRotationDegrees + settingsState.manualRotationOverride) % 360
+                textureRenderer!!.draw(
+                    viewWidth = surfaceWidth,
+                    viewHeight = surfaceHeight,
+                    frameWidth = frameSize.width,
+                    frameHeight = frameSize.height,
+                    sensorOrientationDegrees = currentLens?.sensorOrientationDegrees ?: 90,
+                    displayRotationDegrees = effectiveRotation,
+                    zoom = settingsState.zoom,
+                    offsetXFraction = settingsState.offsetX,
+                    offsetYFraction = settingsState.offsetY,
+                    brightness = settingsState.brightness,
+                    blurEnabled = settingsState.blurEnabled
+                )
+            } else {
+                // Never had a frame yet (permission just granted, no camera hardware, etc.): neutral
+                // background rather than an undefined/garbage buffer.
+                GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight)
+                GLES20.glClearColor(0.04f, 0.05f, 0.06f, 1f)
+                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
             }
-        } else if (hasRenderedFrame) {
-            textureRenderer!!.draw(
-                viewWidth = surfaceWidth,
-                viewHeight = surfaceHeight,
-                frameWidth = frameSize.width,
-                frameHeight = frameSize.height,
-                sensorOrientationDegrees = currentLens?.sensorOrientationDegrees ?: 90,
-                displayRotationDegrees = displayRotationDegrees,
-                zoom = settingsState.zoom,
-                offsetXFraction = settingsState.offsetX,
-                offsetYFraction = settingsState.offsetY,
-                brightness = settingsState.brightness,
-                blurEnabled = settingsState.blurEnabled
-            )
-        } else {
-            // Never had a frame yet (permission just granted, no camera hardware, etc.): neutral
-            // background rather than an undefined/garbage buffer.
-            GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight)
-            GLES20.glClearColor(0.04f, 0.05f, 0.06f, 1f)
-            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+            window.swapBuffers()
+            lastDrawTimeNanos = System.nanoTime()
+        } catch (e: Exception) {
+            Log.e(TAG, "Draw failed", e)
         }
-        window.swapBuffers()
-        lastDrawTimeNanos = System.nanoTime()
     }
 
     /** Lazily decodes the cached previous-wallpaper snapshot into a GL texture, once. */
@@ -204,11 +221,17 @@ class GLRenderThread(private val appContext: Context) {
             textureRenderer != null && surfaceWidth > 0
 
     private fun recomputeCameraDesire() {
-        val shouldOpen = shouldCameraBeOpen()
-        if (shouldOpen && !isCameraOpen) {
-            openCameraNow()
-        } else if (!shouldOpen && isCameraOpen) {
-            closeCameraNow()
+        // Every public setter (visibility, permission, battery, settings) funnels through here
+        // with no try/catch of its own -- this is the one chokepoint that must never propagate.
+        try {
+            val shouldOpen = shouldCameraBeOpen()
+            if (shouldOpen && !isCameraOpen) {
+                openCameraNow()
+            } else if (!shouldOpen && isCameraOpen) {
+                closeCameraNow()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "recomputeCameraDesire failed", e)
         }
     }
 

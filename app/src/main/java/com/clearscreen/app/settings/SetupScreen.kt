@@ -106,6 +106,21 @@ fun SetupScreen(viewModel: SettingsViewModel) {
 
         Text("Calibration", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
 
+        Text(
+            "If the feed looks sideways or upside down, fix it here first -- everything else " +
+                "assumes this is right.",
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WallpaperSettings.ROTATION_OPTIONS.forEach { degrees ->
+                FilterChip(
+                    selected = settings.manualRotationOverride == degrees,
+                    onClick = { viewModel.setRotationOverride(degrees) },
+                    label = { Text("$degrees°") }
+                )
+            }
+        }
+
         if (guidedModeActive) {
             Text(
                 "Hold the phone at arm's length in front of a straight edge (a door frame or " +

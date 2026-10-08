@@ -59,7 +59,8 @@ class CameraTextureRenderer {
         offsetXFraction: Float,
         offsetYFraction: Float,
         brightness: Float,
-        blurEnabled: Boolean
+        blurEnabled: Boolean,
+        mirrorX: Boolean = false
     ) {
         GLES20.glViewport(0, 0, viewWidth, viewHeight)
         GLES20.glClearColor(0f, 0f, 0f, 1f)
@@ -80,7 +81,8 @@ class CameraTextureRenderer {
             displayRotationDegrees = displayRotationDegrees,
             zoom = zoom,
             offsetXFraction = offsetXFraction,
-            offsetYFraction = offsetYFraction
+            offsetYFraction = offsetYFraction,
+            mirrorX = mirrorX
         )
         GLES20.glUniformMatrix4fv(uCropMatrixLoc, 1, false, cropMatrix, 0)
         GLES20.glUniformMatrix4fv(uStMatrixLoc, 1, false, stMatrix, 0)

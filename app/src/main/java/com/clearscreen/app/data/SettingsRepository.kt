@@ -29,6 +29,7 @@ class SettingsRepository(private val context: Context) {
         val HAS_ACTIVATED_ONCE = booleanPreferencesKey("has_activated_once")
         val EFFECT_ON = booleanPreferencesKey("effect_on")
         val MANUAL_ROTATION_OVERRIDE = intPreferencesKey("manual_rotation_override")
+        val MIRROR_HORIZONTAL = booleanPreferencesKey("mirror_horizontal")
     }
 
     private fun fromPrefs(prefs: Preferences): WallpaperSettings = WallpaperSettings(
@@ -43,7 +44,8 @@ class SettingsRepository(private val context: Context) {
         hasCompletedAutoCalibration = prefs[Keys.HAS_COMPLETED_AUTO_CALIBRATION] ?: false,
         hasActivatedOnce = prefs[Keys.HAS_ACTIVATED_ONCE] ?: false,
         effectOn = prefs[Keys.EFFECT_ON] ?: true,
-        manualRotationOverride = prefs[Keys.MANUAL_ROTATION_OVERRIDE] ?: 0
+        manualRotationOverride = prefs[Keys.MANUAL_ROTATION_OVERRIDE] ?: 0,
+        mirrorHorizontal = prefs[Keys.MIRROR_HORIZONTAL] ?: true
     )
 
     val settingsFlow: Flow<WallpaperSettings> = context.dataStore.data.map(::fromPrefs)
@@ -63,20 +65,22 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.HAS_ACTIVATED_ONCE] = updated.hasActivatedOnce
             prefs[Keys.EFFECT_ON] = updated.effectOn
             prefs[Keys.MANUAL_ROTATION_OVERRIDE] = updated.manualRotationOverride
+            prefs[Keys.MIRROR_HORIZONTAL] = updated.mirrorHorizontal
         }
     }
 
     /**
      * Resets calibration/extra settings only -- never touches activation state (so this never
-     * deactivates the wallpaper) or the manual rotation override (a device-specific correction,
-     * not something "reset calibration" should undo).
+     * deactivates the wallpaper) or the rotation/mirror corrections (device-specific fixes, not
+     * something "reset calibration" should undo).
      */
     suspend fun resetToDefaults() {
         update {
             WallpaperSettings(
                 hasActivatedOnce = it.hasActivatedOnce,
                 effectOn = it.effectOn,
-                manualRotationOverride = it.manualRotationOverride
+                manualRotationOverride = it.manualRotationOverride,
+                mirrorHorizontal = it.mirrorHorizontal
             )
         }
     }

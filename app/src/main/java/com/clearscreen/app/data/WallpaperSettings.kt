@@ -25,7 +25,15 @@ data class WallpaperSettings(
      * sensorOrientation/mount angle without real hardware to test on, so this is the guaranteed
      * manual fix if the feed ever comes up sideways or upside down: cycle it until it looks right.
      */
-    val manualRotationOverride: Int = 0
+    val manualRotationOverride: Int = 0,
+    /**
+     * Flips the feed left-right. Confirmed needed (default true) by a real-device test where
+     * text read backwards -- the crop/rotation matrix itself has no reflection in it, so this is
+     * most likely a camera2 buffer-orientation quirk on that specific hardware/HAL rather than
+     * something provably wrong in this code; either way, a manual toggle is the reliable fix
+     * instead of guessing further at code no device here can verify against.
+     */
+    val mirrorHorizontal: Boolean = true
 ) {
     companion object {
         val FPS_CAP_OPTIONS = listOf(15, 24, 30)

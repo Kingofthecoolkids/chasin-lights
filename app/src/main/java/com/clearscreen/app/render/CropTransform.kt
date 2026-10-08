@@ -20,6 +20,10 @@ object CropTransform {
      * @param displayRotationDegrees current display rotation, 0/90/180/270.
      * @param zoom multiplier on top of the automatic "cover fit" scale; 1.0 = auto default.
      * @param offsetXFraction / YFraction crop-window shift, as a fraction of view width/height.
+     * @param mirrorX flips the final image left-right, in view space (i.e. independent of
+     * rotation). Exists because camera2's buffer orientation handling varies enough across real
+     * devices that a mirrored feed can't be reliably ruled out or corrected for in code without
+     * hardware to test against -- see WallpaperSettings.mirrorHorizontal.
      */
     fun computeCropMatrix(
         nativeFrameWidth: Int,
@@ -30,7 +34,8 @@ object CropTransform {
         displayRotationDegrees: Int,
         zoom: Float,
         offsetXFraction: Float,
-        offsetYFraction: Float
+        offsetYFraction: Float,
+        mirrorX: Boolean = false
     ): FloatArray {
         if (nativeFrameWidth <= 0 || nativeFrameHeight <= 0 || viewWidth <= 0 || viewHeight <= 0) {
             return IDENTITY_4X4.copyOf()
@@ -58,6 +63,12 @@ object CropTransform {
         // identity -- i.e. this reads top-to-bottom as the forward pipeline applied to a point.
         val m = Matrix()
         m.postScale(viewWidth.toFloat(), viewHeight.toFloat())           // unit quad -> view pixels
+        if (mirrorX) {
+            // Flip around the view's own center, in view-pixel space -- applied first, so it's
+            // always a left-right flip of what the viewer sees, regardless of device rotation.
+            m.postScale(-1f, 1f)
+            m.postTranslate(viewWidth.toFloat(), 0f)
+        }
         m.postTranslate(-viewWidth / 2f, -viewHeight / 2f)                // center on origin
         m.postTranslate(-offsetPxX, -offsetPxY)                          // calibration offset
         m.postScale(1f / totalScale, 1f / totalScale)                    // undo cover+zoom scale

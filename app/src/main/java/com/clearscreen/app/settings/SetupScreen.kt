@@ -107,8 +107,8 @@ fun SetupScreen(viewModel: SettingsViewModel) {
         Text("Calibration", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
 
         Text(
-            "If the feed looks sideways or upside down, fix it here first -- everything else " +
-                "assumes this is right.",
+            "If the feed looks sideways, upside down, or backwards (mirrored), fix it here " +
+                "first -- everything else assumes this is right.",
             style = androidx.compose.material3.MaterialTheme.typography.bodySmall
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -119,6 +119,14 @@ fun SetupScreen(viewModel: SettingsViewModel) {
                     label = { Text("$degrees°") }
                 )
             }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Mirror (fix backwards text)")
+            Switch(checked = settings.mirrorHorizontal, onCheckedChange = viewModel::setMirrorHorizontal)
         }
 
         if (guidedModeActive) {

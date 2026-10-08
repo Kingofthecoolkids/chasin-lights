@@ -74,7 +74,8 @@ class PreviewRenderer(
                     offsetXFraction = s.offsetX,
                     offsetYFraction = s.offsetY,
                     brightness = s.brightness,
-                    blurEnabled = s.blurEnabled
+                    blurEnabled = s.blurEnabled,
+                    mirrorX = s.mirrorHorizontal
                 )
             } else {
                 GLES20.glViewport(0, 0, viewWidth, viewHeight)

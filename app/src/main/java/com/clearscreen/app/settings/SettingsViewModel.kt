@@ -40,6 +40,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     /** The guaranteed manual fix if the feed is ever sideways/upside down: pick 0/90/180/270 directly. */
     fun setRotationOverride(degrees: Int) = update { it.copy(manualRotationOverride = degrees) }
 
+    /** The guaranteed manual fix if the feed is ever mirrored (backwards text etc). */
+    fun setMirrorHorizontal(mirrored: Boolean) = update { it.copy(mirrorHorizontal = mirrored) }
+
     /** Called once the system wallpaper picker confirms ClearScreen was actually set. */
     fun markActivated() = update { it.copy(hasActivatedOnce = true, effectOn = true) }
 

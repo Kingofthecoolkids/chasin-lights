@@ -185,7 +185,8 @@ class GLRenderThread(private val appContext: Context) {
                     offsetXFraction = settingsState.offsetX,
                     offsetYFraction = settingsState.offsetY,
                     brightness = settingsState.brightness,
-                    blurEnabled = settingsState.blurEnabled
+                    blurEnabled = settingsState.blurEnabled,
+                    mirrorX = settingsState.mirrorHorizontal
                 )
             } else {
                 // Never had a frame yet (permission just granted, no camera hardware, etc.): neutral
